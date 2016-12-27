@@ -5,6 +5,8 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
+import java.io.*;
+
 
 public class Test2 {
 
@@ -13,15 +15,32 @@ public class Test2 {
     
     static String uid = "10370";
 
+//    static String sessionId = "abc80h7kS9TH3eYxUsaLv";
+    static String sessionId = "cda6OiRpI2Midgn2QMaLv";
+//    static String sessionId = "bacSU62E8k4NE7L6qOaLv";
+
 
     public static void main(String[] args) throws Exception {
 
+        File f = new File("F:/data");
+        if (!f.exists()) {
+            f.mkdir();
+        }
 
-//        String id = add();
-//        System.out.println(id);
-//        System.out.println(detail("12077265"));
-//        System.out.println(delete("12077265"));
-
+        for (int i = 0; i < 10; i++) {
+            System.out.println("doing " + i + " ...");
+            StringBuffer sb = new StringBuffer();
+            for (int j = 0; j < 40; j++) {
+                String content = add();
+                sb.append("\r\n");
+                sb.append(content);
+            }
+            File txt = new File(f.getAbsolutePath() + "/part" +  + i + ".txt");
+            FileOutputStream out = new FileOutputStream(txt);
+            out.write(sb.toString().getBytes());
+            out.flush();
+            out.close();
+        }
 
     }
 
@@ -46,6 +65,9 @@ public class Test2 {
         String response = null;
         request = new HttpGet("http://www.gdou.com/entity/function/onlineexercise/homeworkpaper_add_bypolicy_random.jsp?paperId=" + uid + "&pageInt=1&tsId=null");
         response = execute(request);
+        if (response.contains("登陆超时") ||response.contains("403")) {
+            throw new RuntimeException("登陆超时");
+        }
 
         request = new HttpGet("http://www.gdou.com/entity/function/onlineexercise/homeworkpaper_addexe_bypolicy_random.jsp?paperId=" + uid + "&tsId=null");
         response = execute(request);
@@ -79,6 +101,7 @@ public class Test2 {
 
         request = new HttpGet("http://www.gdou.com/entity/function/onlineexercise/homeworkpaper_resultexe.jsp?id=" + uid + "&totalScore=0.0&tsId=null&ischeck=-1");
         response = execute(request);
+        //作业保存失败
         String id = getId(response);
 
         request = new HttpGet("http://www.gdou.com/entity/function/onlineexercise/question_infoexe.jsp?ischeck=0&id=" + uid + "&tsId=" + id);
@@ -88,12 +111,46 @@ public class Test2 {
         request = new HttpGet("http://www.gdou.com/entity/function/onlineexercise/homeworkpaper_result.jsp?id=" + uid + "&tsId=" + id + "&ischeck=0");
         response = execute(request);
 
+//        request = new HttpGet("http://www.gdou.com/entity/function/onlineexercise/homeworkpaper_resultexe.jsp?id=" + uid + "&totalScore=0.0&tsId=" + id + "&ischeck=0");
+//        response = execute(request);
 
-        request = new HttpGet("http://www.gdou.com/entity/function/onlineexercise/homeworkpaper_resultexe.jsp?id=" + uid + "&totalScore=0.0&tsId=" + id + "&ischeck=0");
-        response = execute(request);
+        delete(id);
+        return replace(response);
 
-        return id;
+    }
 
+    private static String replace(String content) throws IOException {
+        int s = content.indexOf("<body");
+        int e = content.indexOf("</table-->");
+        content = content.substring(s, e)
+                .replaceAll("<[a-z]+.+\">", "")
+                .replaceAll("<[a-z]+.>", "")
+                .replaceAll("</[a-z]+>", "")
+                .replaceAll("<p>", "")
+                .replaceAll("<body.+>", "")
+                .replaceAll("<!--", "")
+                .replaceAll("-->", "")
+                .replaceAll("&.+;", "")
+                .replaceAll("\t", "")
+                .replaceAll(" ", "")
+                .replaceAll("作业", "")
+                .replaceAll("您的答案：", "")
+                .replaceAll("此题得分：0.0", "")
+                .replaceAll("试卷总得分：0.0", "")
+                .replaceAll("[0-9]+．第[0-9]+题", "*")
+                .replaceAll("题目内容：", "")
+                .replaceAll("【答题要点】", "");
+        BufferedReader reader = new BufferedReader(new StringReader(content));
+
+        String str = null;
+        StringBuilder sb = new StringBuilder();
+        while ((str = reader.readLine()) != null) {
+            if (str.length() > 0) {
+                sb.append(str).append("\r\n");
+            }
+        }
+        reader.close();
+        return sb.toString();
     }
 
     private static String execute(HttpUriRequest request) throws Exception{
@@ -104,7 +161,7 @@ public class Test2 {
     }
 
     private static void setCookie(HttpUriRequest request){
-        request.setHeader("Cookie", "JSESSIONID=abd92DBiHsg2R6xCDiFKv; firstEnterUrlInSession=http://www.gdou.com/; VisitorCapacity=1");
+        request.setHeader("Cookie", "JSESSIONID=" + sessionId);
     }
 
     private static String getId(String str){

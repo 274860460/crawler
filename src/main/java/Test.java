@@ -12,7 +12,6 @@ public class Test {
     public static void main(String[] args) throws Exception {
 
 
-
         Set<String> set = new HashSet<>();
 
         List<String> lines = FileUtils.readLines(new File("C:\\Users\\Quiet\\Desktop\\马克思主义基本原理.txt"));
